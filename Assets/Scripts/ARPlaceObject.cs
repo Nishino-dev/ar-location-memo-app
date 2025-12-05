@@ -4,13 +4,15 @@ using UnityEngine.XR.ARFoundation;
 using UnityEngine.XR.ARSubsystems;
 using UnityEngine.InputSystem;
 using UnityEngine.EventSystems;
+using TMPro;
 
 public class ARPlaceObject : MonoBehaviour
 {
     [Header("配置するオブジェクト")]
     public GameObject objectToPlace;
 
-    [Header("AR設定")]
+    [Header("UI設定")]
+    public TMP_InputField noteInputField;
     public ARRaycastManager raycastManager;
 
     private List<GameObject> spawnedObjects = new List<GameObject>();
@@ -27,10 +29,23 @@ public class ARPlaceObject : MonoBehaviour
             if (raycastManager.Raycast(touchPosition, hits, TrackableType.PlaneWithinPolygon))
             {
                 Pose hitPose = hits[0].pose;
-                GameObject newObject = Instantiate(objectToPlace, hitPose.position, hitPose.rotation);
-                spawnedObjects.Add(newObject);
+                PlaceMemo(hitPose);
             }
         }
+    }
+
+    void PlaceMemo(Pose hitPose)
+    {
+        GameObject newObject = Instantiate(objectToPlace, hitPose.position, hitPose.rotation);
+
+        TMP_Text textComponent = newObject.GetComponentInChildren<TMP_Text>();
+
+        if (textComponent != null && !string.IsNullOrEmpty(noteInputField.text))
+        {
+            textComponent.text = noteInputField.text;
+        }
+
+        spawnedObjects.Add(newObject);
     }
 
     public void ClearAllNotes()
