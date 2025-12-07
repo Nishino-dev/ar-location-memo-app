@@ -1,5 +1,6 @@
 {
   "dependencies": {
+    "com.google.ar.core.arfoundation.extensions": "https://github.com/google-ar/arcore-unity-extensions.git",
     "com.unity.textmeshpro": "3.0.9",
     "com.unity.xr.arcore": "5.2.0",
     "com.unity.xr.arfoundation": "5.2.0",
