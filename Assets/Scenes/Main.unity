@@ -962,6 +962,7 @@ GameObject:
   - component: {fileID: 559298755}
   - component: {fileID: 559298757}
   - component: {fileID: 559298758}
+  - component: {fileID: 559298759}
   m_Layer: 0
   m_Name: XR Origin
   m_TagString: Untagged
@@ -1044,7 +1045,21 @@ MonoBehaviour:
   objectToPlace: {fileID: 7473946551912273541, guid: eabc425f67da54e458e27e93747c5046, type: 3}
   noteInputField: {fileID: 1609846668}
   raycastManager: {fileID: 559298757}
+  anchorManager: {fileID: 559298759}
   editButton: {fileID: 421915141}
+--- !u!114 &559298759
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 559298752}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 728ad7fae8e460a4ba41265c7308d757, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  m_AnchorPrefab: {fileID: 0}
 --- !u!1 &586983176
 GameObject:
   m_ObjectHideFlags: 0
@@ -1816,6 +1831,7 @@ GameObject:
   - component: {fileID: 1900725049}
   - component: {fileID: 1900725048}
   - component: {fileID: 1900725047}
+  - component: {fileID: 1900725050}
   m_Layer: 0
   m_Name: AR Session
   m_TagString: Untagged
@@ -1865,6 +1881,23 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &1900725050
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1900725046}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 1b50ad3f5d9024549b0a549c5a03a084, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  Session: {fileID: 1900725048}
+  SessionOrigin: {fileID: 0}
+  CameraManager: {fileID: 556206925}
+  ARCoreExtensionsConfig: {fileID: 11400000, guid: c0b9bbf7394cbfe41b08d86e22abff1a, type: 2}
+  CameraConfigFilter: {fileID: 0}
 --- !u!1660057539 &9223372036854775807
 SceneRoots:
   m_ObjectHideFlags: 0
