@@ -21,6 +21,9 @@ public class ARPlaceObject : MonoBehaviour
 
     [Header("ボタン設定")]
     public GameObject editButton;
+    public GameObject loadButton;
+
+    private const string SAVE_KEY_IDS = "SavedAnchorIDs";
 
     private List<GameObject> spawnedObjects = new List<GameObject>();
     private List<ARRaycastHit> hits = new List<ARRaycastHit>();
@@ -30,16 +33,6 @@ public class ARPlaceObject : MonoBehaviour
     {
         if (editButton != null) editButton.SetActive(false);
         noteInputField.onSubmit.AddListener(OnSubmitNote);
-    }
-
-    void OnSubmitNote(string text)
-    {
-        if (selectedNote != null)
-        {
-            TMP_Text textComponent = selectedNote.GetComponentInChildren<TMP_Text>();
-            if (textComponent != null) textComponent.text = noteInputField.text;
-            DeselectNote();
-        }
     }
 
     void Update()
@@ -71,21 +64,20 @@ public class ARPlaceObject : MonoBehaviour
         GameObject newObject = Instantiate(objectToPlace, hitPose.position, rotationFix);
 
         TMP_Text textComponent = newObject.GetComponentInChildren<TMP_Text>();
+        string initialText = "MEMO";
         if (textComponent != null) textComponent.text = "Hosting...";
 
         spawnedObjects.Add(newObject);
         SelectNote(newObject);
 
-        StartCoroutine(HostCloudAnchor(newObject));
+        StartCoroutine(HostCloudAnchor(newObject, initialText));
     }
 
-    IEnumerator HostCloudAnchor(GameObject noteObject)
+    IEnumerator HostCloudAnchor(GameObject noteObject, string memoText)
     {
         ARAnchor localAnchor = noteObject.AddComponent<ARAnchor>();
 
         yield return new WaitForEndOfFrame();
-
-        Debug.Log("☁️ Hosting開始...");
 
         var promise = anchorManager.HostCloudAnchorAsync(localAnchor, 1);
 
@@ -96,21 +88,99 @@ public class ARPlaceObject : MonoBehaviour
         if (promise.State == PromiseState.Done)
         {
             string cloudId = promise.Result.CloudAnchorId;
-            Debug.Log("✅ Host成功！ Cloud ID: " + cloudId);
+            Debug.Log("✅ Host成功 ID: " + cloudId);
 
-            if (textComponent != null)
-            {
-                textComponent.text = "ID: " + cloudId.Substring(0, 5);
-            }
+            SaveAnchorData(cloudId, memoText);
+
+            if (textComponent != null) textComponent.text = memoText;
         }
         else
         {
-            // 失敗...
-            Debug.LogError("❌ Host失敗... エラー: " + promise.State);
+            Debug.LogError("❌ Host失敗: " + promise.State);
             if (textComponent != null) textComponent.text = "Error";
         }
     }
 
+    public void OnLoadButtonClicked()
+    {
+        string storedIds = PlayerPrefs.GetString(SAVE_KEY_IDS, "");
+        if (string.IsNullOrEmpty(storedIds))
+        {
+            Debug.Log("📂 保存されたデータはありません");
+            return;
+        }
+
+        string[] ids = storedIds.Split(',');
+        Debug.Log($"📂 {ids.Length} 件のデータを読み込み開始...");
+
+        foreach (string id in ids)
+        {
+            if (!string.IsNullOrEmpty(id))
+            {
+                StartCoroutine(ResolveCloudAnchor(id));
+            }
+        }
+    }
+
+    IEnumerator ResolveCloudAnchor(string cloudId)
+    {
+        var promise = anchorManager.ResolveCloudAnchorAsync(cloudId);
+
+        while (promise.State == PromiseState.Pending)
+        {
+            yield return null;
+        }
+
+        if (promise.State == PromiseState.Done)
+        {
+            var result = promise.Result;
+
+            if (result == null || result.Anchor == null)
+            {
+                Debug.LogWarning($"⚠️ Resolve成功しましたがAnchorが取得できませんでした (ID: {cloudId}) - 理由: {result?.CloudAnchorState}");
+                yield break;
+            }
+
+            ARCloudAnchor resultAnchor = result.Anchor;
+            Debug.Log("場所特定成功！オブジェクトを復元します。");
+
+            GameObject restoredObject = Instantiate(objectToPlace, resultAnchor.transform.position, resultAnchor.transform.rotation);
+            restoredObject.transform.SetParent(resultAnchor.transform, false);
+
+            string savedText = PlayerPrefs.GetString("Memo_" + cloudId, "MEMO");
+            TMP_Text textComponent = restoredObject.GetComponentInChildren<TMP_Text>();
+            if (textComponent != null) textComponent.text = savedText;
+
+            spawnedObjects.Add(restoredObject);
+        }
+        else
+        {
+            Debug.LogError($"❌ Resolve失敗 (ID: {cloudId}): {promise.State}");
+        }
+    }
+
+    void SaveAnchorData(string cloudId, string text)
+    {
+        string currentIds = PlayerPrefs.GetString(SAVE_KEY_IDS, "");
+        if (!currentIds.Contains(cloudId))
+        {
+            currentIds += cloudId + ",";
+            PlayerPrefs.SetString(SAVE_KEY_IDS, currentIds);
+        }
+
+        PlayerPrefs.SetString("Memo_" + cloudId, text);
+        PlayerPrefs.Save();
+    }
+
+    void OnSubmitNote(string text)
+    {
+        if (selectedNote != null)
+        {
+            TMP_Text textComponent = selectedNote.GetComponentInChildren<TMP_Text>();
+            if (textComponent != null) textComponent.text = noteInputField.text;
+            DeselectNote();
+        }
+    }
 
     void SelectNote(GameObject note)
     {
