@@ -1230,6 +1230,7 @@ GameObject:
   - component: {fileID: 559298757}
   - component: {fileID: 559298758}
   - component: {fileID: 559298759}
+  - component: {fileID: 559298760}
   m_Layer: 0
   m_Name: XR Origin
   m_TagString: Untagged
@@ -1330,6 +1331,19 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   m_AnchorPrefab: {fileID: 0}
+--- !u!114 &559298760
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 559298752}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 7ab0e80cee9cc1d44928bfe488dd1e2d, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  m_PointCloudPrefab: {fileID: 1135375906004068220, guid: 198cb476798fe724694cf879a46f6eba, type: 3}
 --- !u!1 &586983176
 GameObject:
   m_ObjectHideFlags: 0
