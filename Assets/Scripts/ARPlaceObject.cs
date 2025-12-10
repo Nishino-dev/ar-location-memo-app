@@ -15,6 +15,7 @@ public class ARPlaceObject : MonoBehaviour
     public GameObject objectToPlace;
     public TMP_InputField noteInputField;
     public ARRaycastManager raycastManager;
+    public TMP_Text statusText;
 
     [Header("Cloud Anchor設定")]
     public ARAnchorManager anchorManager;
@@ -24,7 +25,6 @@ public class ARPlaceObject : MonoBehaviour
     public GameObject loadButton;
 
     private const string SAVE_KEY_IDS = "SavedAnchorIDs";
-
     private List<GameObject> spawnedObjects = new List<GameObject>();
     private List<ARRaycastHit> hits = new List<ARRaycastHit>();
     private GameObject selectedNote = null;
@@ -33,12 +33,22 @@ public class ARPlaceObject : MonoBehaviour
     {
         if (editButton != null) editButton.SetActive(false);
         noteInputField.onSubmit.AddListener(OnSubmitNote);
+        ShowStatus("準備完了！メモを置いてください");
     }
 
     void Update()
     {
         if (IsPointerOverUI()) return;
         if (GetTouchBegan()) HandleTap();
+    }
+
+    void ShowStatus(string message)
+    {
+        if (statusText != null)
+        {
+            statusText.text = message;
+        }
+        Debug.Log("Status: " + message);
     }
 
     void HandleTap()
@@ -70,17 +80,16 @@ public class ARPlaceObject : MonoBehaviour
         spawnedObjects.Add(newObject);
         SelectNote(newObject);
 
+        ShowStatus("クラウドに保存中...");
         StartCoroutine(HostCloudAnchor(newObject, initialText));
     }
 
     IEnumerator HostCloudAnchor(GameObject noteObject, string memoText)
     {
         ARAnchor localAnchor = noteObject.AddComponent<ARAnchor>();
-
         yield return new WaitForEndOfFrame();
 
         var promise = anchorManager.HostCloudAnchorAsync(localAnchor, 1);
-
         yield return promise;
 
         TMP_Text textComponent = noteObject.GetComponentInChildren<TMP_Text>();
@@ -88,15 +97,17 @@ public class ARPlaceObject : MonoBehaviour
         if (promise.State == PromiseState.Done)
         {
             string cloudId = promise.Result.CloudAnchorId;
-            Debug.Log("✅ Host成功 ID: " + cloudId);
-
+            ShowStatus("保存成功！");
             SaveAnchorData(cloudId, memoText);
 
             if (textComponent != null) textComponent.text = memoText;
+
+            yield return new WaitForSeconds(3f);
+            ShowStatus("保存完了");
         }
         else
         {
-            Debug.LogError("❌ Host失敗: " + promise.State);
+            ShowStatus("保存失敗: " + promise.State);
             if (textComponent != null) textComponent.text = "Error";
         }
     }
@@ -106,12 +117,12 @@ public class ARPlaceObject : MonoBehaviour
         string storedIds = PlayerPrefs.GetString(SAVE_KEY_IDS, "");
         if (string.IsNullOrEmpty(storedIds))
         {
-            Debug.Log("📂 保存されたデータはありません");
+            ShowStatus("保存されたデータがありません");
             return;
         }
 
         string[] ids = storedIds.Split(',');
-        Debug.Log($"📂 {ids.Length} 件のデータを読み込み開始...");
+        ShowStatus($"{ids.Length} 個のメモを探しています...");
 
         foreach (string id in ids)
         {
@@ -137,12 +148,12 @@ public class ARPlaceObject : MonoBehaviour
 
             if (result == null || result.Anchor == null)
             {
-                Debug.LogWarning($"⚠️ Resolve成功しましたがAnchorが取得できませんでした (ID: {cloudId}) - 理由: {result?.CloudAnchorState}");
+                ShowStatus($"場所が見つかりません (理由: {result?.CloudAnchorState})");
                 yield break;
             }
 
             ARCloudAnchor resultAnchor = result.Anchor;
-            Debug.Log("場所特定成功！オブジェクトを復元します。");
+            ShowStatus("場所発見！復元中...");
 
             GameObject restoredObject = Instantiate(objectToPlace, resultAnchor.transform.position, resultAnchor.transform.rotation);
             restoredObject.transform.SetParent(resultAnchor.transform, false);
@@ -152,10 +163,13 @@ public class ARPlaceObject : MonoBehaviour
             if (textComponent != null) textComponent.text = savedText;
 
             spawnedObjects.Add(restoredObject);
+
+            yield return new WaitForSeconds(1f);
+            ShowStatus("復元完了！");
         }
         else
         {
-            Debug.LogError($"❌ Resolve失敗 (ID: {cloudId}): {promise.State}");
+            ShowStatus($"エラー: {promise.State}");
         }
     }
 
@@ -167,7 +181,6 @@ public class ARPlaceObject : MonoBehaviour
             currentIds += cloudId + ",";
             PlayerPrefs.SetString(SAVE_KEY_IDS, currentIds);
         }
-
         PlayerPrefs.SetString("Memo_" + cloudId, text);
         PlayerPrefs.Save();
     }
