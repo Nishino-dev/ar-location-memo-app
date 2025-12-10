@@ -23,6 +23,7 @@ public class ARPlaceObject : MonoBehaviour
     [Header("ボタン設定")]
     public GameObject editButton;
     public GameObject loadButton;
+    public GameObject deleteButton;
 
     private const string SAVE_KEY_IDS = "SavedAnchorIDs";
     private List<GameObject> spawnedObjects = new List<GameObject>();
@@ -32,6 +33,7 @@ public class ARPlaceObject : MonoBehaviour
     void Start()
     {
         if (editButton != null) editButton.SetActive(false);
+        if (deleteButton != null) deleteButton.SetActive(false);
         noteInputField.onSubmit.AddListener(OnSubmitNote);
         ShowStatus("準備完了！メモを置いてください");
     }
@@ -98,10 +100,12 @@ public class ARPlaceObject : MonoBehaviour
         {
             string cloudId = promise.Result.CloudAnchorId;
             ShowStatus("保存成功！");
+
+            noteObject.name = cloudId;
+
             SaveAnchorData(cloudId, memoText);
 
             if (textComponent != null) textComponent.text = memoText;
-
             yield return new WaitForSeconds(3f);
             ShowStatus("保存完了");
         }
@@ -110,6 +114,42 @@ public class ARPlaceObject : MonoBehaviour
             ShowStatus("保存失敗: " + promise.State);
             if (textComponent != null) textComponent.text = "Error";
         }
+    }
+
+    public void OnDeleteButtonClicked()
+    {
+        if (selectedNote == null) return;
+
+        string targetId = selectedNote.name;
+
+        if (targetId.StartsWith("ua-"))
+        {
+            RemoveAnchorData(targetId);
+            ShowStatus("メモを削除しました");
+        }
+        else
+        {
+            ShowStatus("未保存のメモを削除しました");
+        }
+
+        spawnedObjects.Remove(selectedNote);
+        Destroy(selectedNote);
+
+        DeselectNote();
+    }
+
+    void RemoveAnchorData(string cloudId)
+    {
+        string currentIds = PlayerPrefs.GetString(SAVE_KEY_IDS, "");
+        if (currentIds.Contains(cloudId))
+        {
+            currentIds = currentIds.Replace(cloudId + ",", "");
+            PlayerPrefs.SetString(SAVE_KEY_IDS, currentIds);
+        }
+
+        PlayerPrefs.DeleteKey("Memo_" + cloudId);
+        PlayerPrefs.Save();
+        Debug.Log("データ削除完了: " + cloudId);
     }
 
     public void OnLoadButtonClicked()
@@ -158,6 +198,8 @@ public class ARPlaceObject : MonoBehaviour
             GameObject restoredObject = Instantiate(objectToPlace, resultAnchor.transform.position, resultAnchor.transform.rotation);
             restoredObject.transform.SetParent(resultAnchor.transform, false);
 
+            restoredObject.name = cloudId;
+
             string savedText = PlayerPrefs.GetString("Memo_" + cloudId, "MEMO");
             TMP_Text textComponent = restoredObject.GetComponentInChildren<TMP_Text>();
             if (textComponent != null) textComponent.text = savedText;
@@ -205,12 +247,14 @@ public class ARPlaceObject : MonoBehaviour
         TMP_Text textComponent = selectedNote.GetComponentInChildren<TMP_Text>();
         if (textComponent != null) noteInputField.text = textComponent.text;
         if (editButton != null) editButton.SetActive(true);
+        if (deleteButton != null) deleteButton.SetActive(true);
     }
 
     public void OnEditButtonClicked()
     {
         if (selectedNote == null) return;
         if (editButton != null) editButton.SetActive(false);
+        if (deleteButton != null) deleteButton.SetActive(false);
         noteInputField.ActivateInputField();
     }
 
@@ -224,6 +268,7 @@ public class ARPlaceObject : MonoBehaviour
         selectedNote = null;
         noteInputField.text = "";
         if (editButton != null) editButton.SetActive(false);
+        if (deleteButton != null) deleteButton.SetActive(false);
         noteInputField.DeactivateInputField();
     }
 
