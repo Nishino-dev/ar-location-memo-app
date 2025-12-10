@@ -1,3 +1,4 @@
+using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.XR.ARFoundation;
@@ -6,6 +7,7 @@ using UnityEngine.InputSystem;
 using UnityEngine.EventSystems;
 using TMPro;
 using UnityEngine.UI;
+using Google.XR.ARCoreExtensions;
 
 public class ARPlaceObject : MonoBehaviour
 {
@@ -13,6 +15,9 @@ public class ARPlaceObject : MonoBehaviour
     public GameObject objectToPlace;
     public TMP_InputField noteInputField;
     public ARRaycastManager raycastManager;
+
+    [Header("Cloud Anchor設定")]
+    public ARAnchorManager anchorManager;
 
     [Header("ボタン設定")]
     public GameObject editButton;
@@ -32,10 +37,7 @@ public class ARPlaceObject : MonoBehaviour
         if (selectedNote != null)
         {
             TMP_Text textComponent = selectedNote.GetComponentInChildren<TMP_Text>();
-            if (textComponent != null)
-            {
-                textComponent.text = noteInputField.text;
-            }
+            if (textComponent != null) textComponent.text = noteInputField.text;
             DeselectNote();
         }
     }
@@ -43,17 +45,12 @@ public class ARPlaceObject : MonoBehaviour
     void Update()
     {
         if (IsPointerOverUI()) return;
-
-        if (GetTouchBegan())
-        {
-            HandleTap();
-        }
+        if (GetTouchBegan()) HandleTap();
     }
 
     void HandleTap()
     {
         GameObject clickedNote = GetClickedNote();
-
         if (clickedNote != null)
         {
             SelectNote(clickedNote);
@@ -63,14 +60,8 @@ public class ARPlaceObject : MonoBehaviour
         Vector2 touchPosition = GetTouchPosition();
         if (raycastManager.Raycast(touchPosition, hits, TrackableType.PlaneWithinPolygon))
         {
-            if (selectedNote != null)
-            {
-                DeselectNote();
-            }
-            else
-            {
-                CreateNewNote(hits[0].pose);
-            }
+            if (selectedNote != null) DeselectNote();
+            else CreateNewNote(hits[0].pose);
         }
     }
 
@@ -80,34 +71,62 @@ public class ARPlaceObject : MonoBehaviour
         GameObject newObject = Instantiate(objectToPlace, hitPose.position, rotationFix);
 
         TMP_Text textComponent = newObject.GetComponentInChildren<TMP_Text>();
-        if (textComponent != null) textComponent.text = "MEMO";
+        if (textComponent != null) textComponent.text = "Hosting...";
 
         spawnedObjects.Add(newObject);
         SelectNote(newObject);
+
+        StartCoroutine(HostCloudAnchor(newObject));
     }
+
+    IEnumerator HostCloudAnchor(GameObject noteObject)
+    {
+        ARAnchor localAnchor = noteObject.AddComponent<ARAnchor>();
+
+        yield return new WaitForEndOfFrame();
+
+        Debug.Log("☁️ Hosting開始...");
+
+        var promise = anchorManager.HostCloudAnchorAsync(localAnchor, 1);
+
+        yield return promise;
+
+        TMP_Text textComponent = noteObject.GetComponentInChildren<TMP_Text>();
+
+        if (promise.State == PromiseState.Done)
+        {
+            string cloudId = promise.Result.CloudAnchorId;
+            Debug.Log("✅ Host成功！ Cloud ID: " + cloudId);
+
+            if (textComponent != null)
+            {
+                textComponent.text = "ID: " + cloudId.Substring(0, 5);
+            }
+        }
+        else
+        {
+            // 失敗...
+            Debug.LogError("❌ Host失敗... エラー: " + promise.State);
+            if (textComponent != null) textComponent.text = "Error";
+        }
+    }
+
 
     void SelectNote(GameObject note)
     {
         if (selectedNote != null) DeselectNote();
-
         selectedNote = note;
-
         var outline = selectedNote.GetComponentInChildren<Outline>();
         if (outline != null) outline.enabled = true;
 
         TMP_Text textComponent = selectedNote.GetComponentInChildren<TMP_Text>();
-        if (textComponent != null)
-        {
-            noteInputField.text = textComponent.text;
-        }
-
+        if (textComponent != null) noteInputField.text = textComponent.text;
         if (editButton != null) editButton.SetActive(true);
     }
 
     public void OnEditButtonClicked()
     {
         if (selectedNote == null) return;
-
         if (editButton != null) editButton.SetActive(false);
         noteInputField.ActivateInputField();
     }
@@ -119,12 +138,9 @@ public class ARPlaceObject : MonoBehaviour
             var outline = selectedNote.GetComponentInChildren<Outline>();
             if (outline != null) outline.enabled = false;
         }
-
         selectedNote = null;
         noteInputField.text = "";
-
         if (editButton != null) editButton.SetActive(false);
-
         noteInputField.DeactivateInputField();
     }
 
