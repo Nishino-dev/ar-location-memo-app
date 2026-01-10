@@ -731,7 +731,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: e2c95ffefd7478046bbd99d5b0295256, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  objectToSpawn: {fileID: 2435077687157271427, guid: b0539e7314032ac428bc971a4c373a37, type: 3}
+  objectToSpawn: {fileID: 7473946551912273541, guid: eabc425f67da54e458e27e93747c5046, type: 3}
   raycastManager: {fileID: 559298761}
   isWideMode: 0
   focusCropFactor: 0.4

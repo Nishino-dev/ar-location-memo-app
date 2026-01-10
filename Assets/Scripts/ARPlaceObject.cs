@@ -55,8 +55,12 @@ public class ARPlaceObject : MonoBehaviour
         if (trackedImage.trackingState == TrackingState.Tracking)
         {
             obj.SetActive(true);
-            obj.transform.position = trackedImage.transform.position;
-            obj.transform.rotation = trackedImage.transform.rotation * Quaternion.Euler(90, 0, 0);
+
+            Vector3 pos = trackedImage.transform.position;
+
+            Quaternion rot = Quaternion.LookRotation(trackedImage.transform.forward, trackedImage.transform.up);
+
+            obj.transform.SetPositionAndRotation(pos, rot);
         }
         else
         {
