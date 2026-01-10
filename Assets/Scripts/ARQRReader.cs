@@ -6,6 +6,7 @@ using UnityEngine.XR.ARFoundation;
 using UnityEngine.XR.ARSubsystems;
 using ZXing;
 using ZXing.Common;
+using TMPro;
 
 [RequireComponent(typeof(ARAnchorManager))]
 public class ARQRReader : MonoBehaviour
@@ -52,7 +53,6 @@ public class ARQRReader : MonoBehaviour
             cameraManager.autoFocusRequested = true;
         }
 
-        else
         if (raycastManager == null)
             raycastManager = FindObjectOfType<ARRaycastManager>();
     }
@@ -65,7 +65,7 @@ public class ARQRReader : MonoBehaviour
 
     void TryScanQR()
     {
-        if (!cameraManager.TryAcquireLatestCpuImage(out XRCpuImage image)) return;
+        if (cameraManager == null || !cameraManager.TryAcquireLatestCpuImage(out XRCpuImage image)) return;
 
         isScanning = true;
 
@@ -169,13 +169,19 @@ public class ARQRReader : MonoBehaviour
 
         if (raycastManager.Raycast(screenPosition, hits, TrackableType.PlaneWithinPolygon))
         {
-            Pose hitPose = hits[0].pose;
+            ARRaycastHit hit = hits[0];
 
-            GameObject obj = Instantiate(objectToSpawn, hitPose.position, hitPose.rotation);
-            obj.transform.localScale = Vector3.one * 0.05f;
+            GameObject obj = Instantiate(objectToSpawn, hit.pose.position, hit.pose.rotation);
+
+            obj.transform.Rotate(90f, 0f, 0f);
+
+            TMP_Text textComponent = obj.GetComponentInChildren<TMP_Text>();
+            if (textComponent != null)
+            {
+                textComponent.text = qrText;
+            }
 
             obj.AddComponent<ARAnchor>();
-
             scannedQRTexts.Add(qrText);
         }
     }
