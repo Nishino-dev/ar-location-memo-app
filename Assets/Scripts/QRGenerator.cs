@@ -1,15 +1,28 @@
 using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
-using ZXing;
 using ZXing.QrCode;
-using ZXing.Common;
+using System.Collections;
 
 public class QRGenerator : MonoBehaviour
 {
     [Header("UIê›íË")]
     public TMP_InputField inputField;
     public RawImage qrDisplayImage;
+    public Button saveButton;
+    public GameObject messageUI;
+
+    private Texture2D generatedTexture;
+
+    void Start()
+    {
+        if (saveButton != null)
+        {
+            saveButton.interactable = false;
+        }
+
+        if (messageUI != null) messageUI.SetActive(false);
+    }
 
     public void OnGenerateButtonClicked()
     {
@@ -17,33 +30,54 @@ public class QRGenerator : MonoBehaviour
 
         if (string.IsNullOrEmpty(text)) return;
 
-        int width = 256;
-        int height = 256;
+        int width = 512;
+        int height = 512;
 
         var writer = new QRCodeWriter();
-        BitMatrix bitMatrix = writer.encode(text, BarcodeFormat.QR_CODE, width, height);
+        var bitMatrix = writer.encode(text, ZXing.BarcodeFormat.QR_CODE, width, height);
 
-        Texture2D texture = new Texture2D(width, height);
+        generatedTexture = new Texture2D(width, height);
         Color32[] pixels = new Color32[width * height];
 
         for (int y = 0; y < height; y++)
         {
             for (int x = 0; x < width; x++)
             {
-                if (bitMatrix[x, y])
-                {
-                    pixels[y * width + x] = Color.black;
-                }
-                else
-                {
-                    pixels[y * width + x] = Color.white;
-                }
+                pixels[y * width + x] = bitMatrix[x, y] ? Color.black : Color.white;
             }
         }
 
-        texture.SetPixels32(pixels);
-        texture.Apply();
+        generatedTexture.SetPixels32(pixels);
+        generatedTexture.Apply();
 
-        qrDisplayImage.texture = texture;
+        qrDisplayImage.texture = generatedTexture;
+
+        if (saveButton != null)
+        {
+            saveButton.interactable = true;
+        }
+    }
+
+    public void OnSaveButtonClicked()
+    {
+        if (generatedTexture == null) return;
+
+        NativeGallery.SaveImageToGallery(generatedTexture, "MyARApp", "QRCode_{0}.png");
+
+        Debug.Log("ï€ë∂èàóùÇé¿çsÇµÇ‹ÇµÇΩ");
+
+        if (messageUI != null)
+        {
+            StartCoroutine(ShowMessageRoutine());
+        }
+    }
+
+    IEnumerator ShowMessageRoutine()
+    {
+        messageUI.SetActive(true);
+
+        yield return new WaitForSeconds(2.0f);
+
+        messageUI.SetActive(false);
     }
 }
