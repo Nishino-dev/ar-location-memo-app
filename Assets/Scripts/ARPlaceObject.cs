@@ -47,6 +47,13 @@ public class ARPlaceObject : MonoBehaviour
         {
             GameObject newObj = Instantiate(objectToPlace);
             newObj.name = name;
+
+            ARMemo memo = newObj.GetComponent<ARMemo>();
+            if (memo != null)
+            {
+                memo.Initialize(name);
+            }
+
             spawnedObjects[name] = newObj;
         }
 
@@ -55,12 +62,8 @@ public class ARPlaceObject : MonoBehaviour
         if (trackedImage.trackingState == TrackingState.Tracking)
         {
             obj.SetActive(true);
-
-            Vector3 pos = trackedImage.transform.position;
-
-            Quaternion rot = Quaternion.LookRotation(trackedImage.transform.forward, trackedImage.transform.up);
-
-            obj.transform.SetPositionAndRotation(pos, rot);
+            obj.transform.position = trackedImage.transform.position;
+            obj.transform.rotation = Quaternion.LookRotation(trackedImage.transform.forward, trackedImage.transform.up);
         }
         else
         {

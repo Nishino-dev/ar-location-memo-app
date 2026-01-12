@@ -287,6 +287,7 @@ GameObject:
   m_Component:
   - component: {fileID: 4037581061694654041}
   - component: {fileID: 5181671531789680651}
+  - component: {fileID: 7777890069250577609}
   m_Layer: 0
   m_Name: MemoContainer
   m_TagString: Note
@@ -332,3 +333,15 @@ BoxCollider:
   serializedVersion: 3
   m_Size: {x: 0.3, y: 0.2, z: 0.005}
   m_Center: {x: 0, y: 0, z: 0}
+--- !u!114 &7777890069250577609
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7473946551912273541}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 53a152878e24990469b68cd29da1741f, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
