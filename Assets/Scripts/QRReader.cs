@@ -4,12 +4,10 @@ using System.Threading.Tasks;
 using UnityEngine;
 using UnityEngine.XR.ARFoundation;
 using UnityEngine.XR.ARSubsystems;
-using ZXing;
-using ZXing.Common;
 using TMPro;
 
 [RequireComponent(typeof(ARAnchorManager))]
-public class ARQRReader : MonoBehaviour
+public class QRReader : MonoBehaviour
 {
     [Header("AR Settings")]
     public GameObject objectToSpawn;
@@ -100,59 +98,13 @@ public class ARQRReader : MonoBehaviour
     private async void ScanInBackground(byte[] pixels, int width, int height,
                                         int offsetX, int offsetY, int downscale, int origW, int origH)
     {
-        ScanResult resultData = await Task.Run<ScanResult>(() =>
+        string decodedText = await Task.Run(() => QRDecoder.Decode(pixels, width, height));
+
+        if (!string.IsNullOrEmpty(decodedText))
         {
-            try
-            {
-                MultiFormatReader reader = new MultiFormatReader();
-                var hints = new Dictionary<DecodeHintType, object>();
-                hints.Add(DecodeHintType.POSSIBLE_FORMATS, new List<BarcodeFormat> { BarcodeFormat.QR_CODE });
-                if (isWideMode) hints.Add(DecodeHintType.TRY_HARDER, true);
-                reader.Hints = hints;
-
-                var source = new PlanarYUVLuminanceSource(pixels, width, height, 0, 0, width, height, false);
-                var binarizer = new HybridBinarizer(source);
-                var binaryBitmap = new BinaryBitmap(binarizer);
-                var result = reader.decode(binaryBitmap);
-
-                if (result == null) return null;
-
-                float resultX = 0;
-                float resultY = 0;
-                if (result.ResultPoints != null && result.ResultPoints.Length > 0)
-                {
-                    foreach (var point in result.ResultPoints)
-                    {
-                        resultX += point.X;
-                        resultY += point.Y;
-                    }
-                    resultX /= result.ResultPoints.Length;
-                    resultY /= result.ResultPoints.Length;
-                }
-                else
-                {
-                    resultX = width / 2.0f;
-                    resultY = height / 2.0f;
-                }
-
-                float realX = resultX * downscale;
-                float realY = resultY * downscale;
-                realX += offsetX;
-                realY += offsetY;
-
-                return new ScanResult
-                {
-                    Text = result.Text,
-                    CenterX = realX / origW,
-                    CenterY = realY / origH
-                };
-            }
-            catch { return null; }
-        });
-
-        if (resultData != null)
-        {
-            SpawnAndLock(resultData.Text, resultData.CenterX, resultData.CenterY);
+            float centerX = (width / 2.0f * downscale + offsetX) / origW;
+            float centerY = (height / 2.0f * downscale + offsetY) / origH;
+            SpawnAndLock(decodedText, centerX, centerY);
         }
 
         nextScanTime = Time.time + scanInterval;
@@ -173,12 +125,10 @@ public class ARQRReader : MonoBehaviour
 
             GameObject obj = Instantiate(objectToSpawn, hit.pose.position, hit.pose.rotation);
 
-            obj.transform.Rotate(90f, 0f, 0f);
-
-            TMP_Text textComponent = obj.GetComponentInChildren<TMP_Text>();
-            if (textComponent != null)
+            ARMemo memo = obj.GetComponent<ARMemo>();
+            if (memo != null)
             {
-                textComponent.text = qrText;
+                memo.Initialize(qrText);
             }
 
             obj.AddComponent<ARAnchor>();
