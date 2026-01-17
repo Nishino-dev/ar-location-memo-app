@@ -345,3 +345,4 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 53a152878e24990469b68cd29da1741f, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  backgroundRenderer: {fileID: 273047436507732408}

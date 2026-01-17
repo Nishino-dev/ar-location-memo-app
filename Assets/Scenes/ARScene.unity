@@ -665,6 +665,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   trackedImageManager: {fileID: 0}
+  raycastManager: {fileID: 559298761}
   objectToPlace: {fileID: 7473946551912273541, guid: eabc425f67da54e458e27e93747c5046, type: 3}
 --- !u!114 &559298760
 MonoBehaviour:
@@ -733,11 +734,6 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   objectToSpawn: {fileID: 7473946551912273541, guid: eabc425f67da54e458e27e93747c5046, type: 3}
   raycastManager: {fileID: 559298761}
-  isWideMode: 0
-  focusCropFactor: 0.4
-  focusDownscale: 1
-  wideCropFactor: 1
-  wideDownscale: 2
   scanInterval: 0.5
 --- !u!1 &630692221
 GameObject:

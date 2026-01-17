@@ -8,6 +8,7 @@ public class ARPlaceObject : MonoBehaviour
 {
     [Header("設定")]
     public ARTrackedImageManager trackedImageManager;
+    public ARRaycastManager raycastManager;
     public GameObject objectToPlace;
 
     private Dictionary<string, GameObject> spawnedObjects = new Dictionary<string, GameObject>();
@@ -22,6 +23,32 @@ public class ARPlaceObject : MonoBehaviour
     {
         if (trackedImageManager != null)
             trackedImageManager.trackedImagesChanged -= OnTrackedImagesChanged;
+    }
+
+    public void PlaceOrUpdateByQR(MemoData data)
+    {
+        Vector2 screenCenter = new Vector2(Screen.width / 2f, Screen.height / 2f);
+        List<ARRaycastHit> hits = new List<ARRaycastHit>();
+
+        if (raycastManager.Raycast(screenCenter, hits, TrackableType.AllTypes))
+        {
+            Pose hitPose = hits[0].pose;
+            Vector3 forward = hitPose.rotation * Vector3.forward;
+            forward.y = 0;
+            Quaternion uprightRotation = Quaternion.LookRotation(forward, Vector3.up);
+
+            if (spawnedObjects.ContainsKey(data.txt))
+            {
+                UpdateMemoTransform(spawnedObjects[data.txt], hitPose.position, uprightRotation, data);
+            }
+            else
+            {
+                GameObject obj = Instantiate(objectToPlace, hitPose.position, uprightRotation);
+                if (obj.TryGetComponent<ARMemo>(out var memo)) memo.Initialize(data);
+                obj.AddComponent<ARAnchor>();
+                spawnedObjects.Add(data.txt, obj);
+            }
+        }
     }
 
     void OnTrackedImagesChanged(ARTrackedImagesChangedEventArgs eventArgs)
@@ -42,18 +69,12 @@ public class ARPlaceObject : MonoBehaviour
     void UpdateImage(ARTrackedImage trackedImage)
     {
         string name = trackedImage.referenceImage.name;
+        MemoData data = new MemoData { v = 1, txt = name, fc = "#FFFFFF", bc = "#000000", sz = 1.0f };
 
         if (!spawnedObjects.ContainsKey(name))
         {
-            GameObject newObj = Instantiate(objectToPlace);
-            newObj.name = name;
-
-            ARMemo memo = newObj.GetComponent<ARMemo>();
-            if (memo != null)
-            {
-                memo.Initialize(name);
-            }
-
+            GameObject newObj = Instantiate(objectToPlace, trackedImage.transform.position, trackedImage.transform.rotation);
+            if (newObj.TryGetComponent<ARMemo>(out var memo)) memo.Initialize(data);
             spawnedObjects[name] = newObj;
         }
 
@@ -62,12 +83,22 @@ public class ARPlaceObject : MonoBehaviour
         if (trackedImage.trackingState == TrackingState.Tracking)
         {
             obj.SetActive(true);
-            obj.transform.position = trackedImage.transform.position;
-            obj.transform.rotation = Quaternion.LookRotation(trackedImage.transform.forward, trackedImage.transform.up);
+            UpdateMemoTransform(obj, trackedImage.transform.position, trackedImage.transform.rotation, data);
         }
         else
         {
             obj.SetActive(false);
         }
+    }
+
+    private void UpdateMemoTransform(GameObject obj, Vector3 pos, Quaternion rot, MemoData data)
+    {
+        obj.transform.position = pos;
+        obj.transform.rotation = rot;
+        if (obj.TryGetComponent<ARMemo>(out var memo)) memo.Initialize(data);
+
+        var anchor = obj.GetComponent<ARAnchor>();
+        if (anchor != null) Destroy(anchor);
+        obj.AddComponent<ARAnchor>();
     }
 }
