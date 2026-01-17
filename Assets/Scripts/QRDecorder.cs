@@ -8,20 +8,17 @@ public static class QRDecoder
     {
         try
         {
-            MultiFormatReader reader = new MultiFormatReader();
-            var hints = new Dictionary<DecodeHintType, object>
-            {
-                { DecodeHintType.POSSIBLE_FORMATS, new List<BarcodeFormat> { BarcodeFormat.QR_CODE } },
-                { DecodeHintType.TRY_HARDER, true }
-            };
-            reader.Hints = hints;
+            var reader = new BarcodeReaderGeneric();
+
+            reader.Options.PossibleFormats = new List<BarcodeFormat> { BarcodeFormat.QR_CODE };
+            reader.Options.TryHarder = true;
+            reader.Options.CharacterSet = "UTF-8";
 
             var source = new PlanarYUVLuminanceSource(pixels, width, height, 0, 0, width, height, false);
-            var binarizer = new HybridBinarizer(source);
-            var binaryBitmap = new BinaryBitmap(binarizer);
-            var result = reader.decode(binaryBitmap);
 
-            return result?.Text;
+            var result = reader.Decode(source);
+
+            return result?.Text?.Trim();
         }
         catch
         {
