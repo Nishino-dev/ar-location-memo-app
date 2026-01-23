@@ -3,6 +3,7 @@ using UnityEngine.UI;
 using TMPro;
 using ZXing.QrCode;
 using System.Collections;
+using System.Collections.Generic;
 
 public class QRGenerator : MonoBehaviour
 {
@@ -91,7 +92,11 @@ public class QRGenerator : MonoBehaviour
         int width = 512;
         int height = 512;
         var writer = new QRCodeWriter();
-        var bitMatrix = writer.encode(payload, ZXing.BarcodeFormat.QR_CODE, width, height);
+        var hints = new Dictionary<ZXing.EncodeHintType, object>
+        {
+            { ZXing.EncodeHintType.CHARACTER_SET, "UTF-8" }
+        };
+        var bitMatrix = writer.encode(payload, ZXing.BarcodeFormat.QR_CODE, width, height, hints);
 
         generatedTexture = new Texture2D(width, height);
         Color32[] pixels = new Color32[width * height];
