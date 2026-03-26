@@ -88,7 +88,7 @@ public class QRReader : MonoBehaviour
             catch
             {
                 if (decodedText.StartsWith("{")) return;
-                data = new MemoData { v = 1, txt = decodedText, fc = "#000000", bc = "#FFFFFF", sz = 1.0f };
+                data = new MemoData { v = 1, txt = decodedText, fc = "#000000", bc = "#FFFFFF" };
             }
 
             if (data != null)
