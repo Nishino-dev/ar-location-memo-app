@@ -1,0 +1,6 @@
+<ui:UXML xmlns:ui="UnityEngine.UIElements" xmlns:uie="UnityEditor.UIElements" xsi="http://www.w3.org/2001/XMLSchema-instance" engine="UnityEngine.UIElements" editor="UnityEditor.UIElements" noNamespaceSchemaLocation="../../../UIElementsSchema/UIElements.xsd" editor-extension-mode="False">
+    <Style src="project://database/Assets/UI/Styles/AppStyle.uss?fileID=7433441132597879392&amp;guid=9a37b308dd1d681448a9baf572388be2&amp;type=3#AppStyle" />
+    <ui:VisualElement name="Conitaner" picking-mode="Ignore" style="flex-grow: 1; -unity-font: url(&quot;project://database/Assets/Fonts/NotoSansJP-Regular.ttf?fileID=12800000&amp;guid=158445b2f8da1f64bb39ce776870ae4a&amp;type=3#NotoSansJP-Regular&quot;); -unity-font-definition: initial;">
+        <ui:Button text="←" parse-escape-sequences="true" display-tooltip-when-elided="true" name="BackButton" class="back-button" style="width: 150px; height: 150px; font-size: 80px; padding-top: 10px; padding-right: 10px; padding-bottom: 10px; padding-left: 10px; margin-top: 50px; margin-right: 0; margin-bottom: 0; margin-left: 50px;" />
+    </ui:VisualElement>
+</ui:UXML>

@@ -30,8 +30,7 @@ public class ARMemo : MonoBehaviour
             }
         }
 
-        float scale = Mathf.Clamp(data.sz, 0.1f, 2.0f);
-        transform.localScale = Vector3.one * scale;
+        transform.localScale = Vector3.one;
         transform.localRotation = Quaternion.Euler(90f, 0f, 0f);
     }
 }

@@ -69,7 +69,7 @@ public class ARPlaceObject : MonoBehaviour
     void UpdateImage(ARTrackedImage trackedImage)
     {
         string name = trackedImage.referenceImage.name;
-        MemoData data = new MemoData { v = 1, txt = name, fc = "#FFFFFF", bc = "#000000", sz = 1.0f };
+        MemoData data = new MemoData { v = 1, txt = name, fc = "#FFFFFF", bc = "#000000" };
 
         if (!spawnedObjects.ContainsKey(name))
         {
