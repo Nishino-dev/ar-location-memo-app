@@ -2,6 +2,7 @@ using UnityEngine;
 using UnityEngine.UIElements;
 using UnityEngine.SceneManagement;
 using System.Collections;
+using System.Collections.Generic;
 
 public class GenerateUIController : MonoBehaviour
 {
@@ -35,12 +36,17 @@ public class GenerateUIController : MonoBehaviour
         backBtn = root.Q<Button>("BackButton");
         messageUI = root.Q<VisualElement>("MessageUI");
 
+        var historyBtn = root.Q<Button>("HistoryButton");
+
         if (saveBtn != null) saveBtn.SetEnabled(false);
         if (messageUI != null) messageUI.style.display = DisplayStyle.None;
 
         generateBtn.clicked += OnGenerateClicked;
         saveBtn.clicked += OnSaveClicked;
         backBtn.clicked += () => SceneManager.LoadScene("MenuScene");
+
+        if (historyBtn != null)
+            historyBtn.clicked += () => SceneManager.LoadScene("HistoryScene");
 
         fontColorField.RegisterValueChangedCallback(evt => UpdateColor(fontPreview, evt.newValue));
         backgroundColorField.RegisterValueChangedCallback(evt => UpdateColor(backPreview, evt.newValue));
@@ -66,7 +72,30 @@ public class GenerateUIController : MonoBehaviour
     {
         if (currentTexture == null) return;
         NativeGallery.SaveImageToGallery(currentTexture, "MyARApp", "QRCode_{0}.png");
+        SaveToHistory();
         StartCoroutine(ShowMessage());
+    }
+
+    private void SaveToHistory()
+    {
+        MemoData newData = new MemoData
+        {
+            v = 1,
+            txt = contentField.value,
+            fc = fontColorField.value,
+            bc = backgroundColorField.value
+        };
+
+        string json = PlayerPrefs.GetString("QR_HISTORY", "{\"memoList\":[]}");
+        HistoryWrapper history = JsonUtility.FromJson<HistoryWrapper>(json);
+
+        history.memoList.Insert(0, newData);
+
+        if (history.memoList.Count > 50)
+            history.memoList.RemoveAt(history.memoList.Count - 1);
+
+        PlayerPrefs.SetString("QR_HISTORY", JsonUtility.ToJson(history));
+        PlayerPrefs.Save();
     }
 
     IEnumerator ShowMessage()
