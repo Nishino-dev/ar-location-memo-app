@@ -52,10 +52,26 @@ public class QRGenerator : MonoBehaviour
             texture.Apply(false);
             return texture;
         }
-        catch (System.Exception e)
+        catch (System.Exception)
         {
-            Debug.LogError(e.Message);
             return null;
         }
+    }
+
+    public void SaveToHistory(MemoData newData)
+    {
+        string json = PlayerPrefs.GetString("QR_HISTORY", "{\"memoList\":[]}");
+        HistoryWrapper history = JsonUtility.FromJson<HistoryWrapper>(json);
+
+        history.memoList.Insert(0, newData);
+
+        if (history.memoList.Count > 50)
+        {
+            history.memoList.RemoveAt(history.memoList.Count - 1);
+        }
+
+        string newJson = JsonUtility.ToJson(history);
+        PlayerPrefs.SetString("QR_HISTORY", newJson);
+        PlayerPrefs.Save();
     }
 }

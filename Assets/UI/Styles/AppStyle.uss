@@ -128,3 +128,20 @@
     color: rgb(51, 51, 51);
     -unity-text-align: middle-center;
 }
+
+.color-info-container {
+    flex-direction: row;
+    align-items: center;
+    margin-top: 4px;
+}
+
+.color-dot {
+    width: 80px;
+    height: 80px;
+    border-radius: 8px;
+    border-width: 1px;
+    border-color: rgb(221, 221, 221);
+    margin-right: 0;
+    flex-shrink: 0;
+    background-color: rgb(255, 255, 255);
+}
