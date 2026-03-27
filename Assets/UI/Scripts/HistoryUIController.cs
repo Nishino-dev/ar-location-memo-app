@@ -2,6 +2,7 @@ using UnityEngine;
 using UnityEngine.UIElements;
 using UnityEngine.SceneManagement;
 using System.Collections.Generic;
+using System.Linq;
 
 public class HistoryUIController : MonoBehaviour
 {
@@ -10,6 +11,19 @@ public class HistoryUIController : MonoBehaviour
 
     private ScrollView scrollView;
     private Button backBtn;
+    private Button deleteSelectedBtn;
+
+    private VisualElement dialogOverlay;
+    private Button confirmDeleteBtn;
+    private Button cancelDeleteBtn;
+
+    private List<MemoData> selectedItems = new List<MemoData>();
+
+    private HistoryWrapper GetHistory()
+    {
+        string json = PlayerPrefs.GetString("QR_HISTORY", "{\"memoList\":[]}");
+        return JsonUtility.FromJson<HistoryWrapper>(json);
+    }
 
     private void OnEnable()
     {
@@ -17,24 +31,70 @@ public class HistoryUIController : MonoBehaviour
 
         scrollView = root.Q<ScrollView>("HistoryScrollView");
         backBtn = root.Q<Button>("BackButton");
+        deleteSelectedBtn = root.Q<Button>("DeleteSelectedButton");
+
+        dialogOverlay = root.Q<VisualElement>("DialogOverlay");
+        confirmDeleteBtn = root.Q<Button>("ConfirmDeleteButton");
+        cancelDeleteBtn = root.Q<Button>("CancelDeleteButton");
 
         if (backBtn != null)
             backBtn.clicked += () => SceneManager.LoadScene("GenerateScene");
 
+        if (deleteSelectedBtn != null)
+        {
+            deleteSelectedBtn.SetEnabled(false);
+            deleteSelectedBtn.clicked += () => {
+                if (dialogOverlay != null)
+                    dialogOverlay.style.display = DisplayStyle.Flex;
+            };
+        }
+
+        if (cancelDeleteBtn != null)
+            cancelDeleteBtn.clicked += () => dialogOverlay.style.display = DisplayStyle.None;
+
+        if (confirmDeleteBtn != null)
+        {
+            confirmDeleteBtn.clicked += () => {
+                ExecuteDelete();
+                dialogOverlay.style.display = DisplayStyle.None;
+            };
+        }
+
         RefreshList();
+    }
+
+    private void ExecuteDelete()
+    {
+        if (selectedItems.Count == 0) return;
+
+        HistoryWrapper history = GetHistory();
+
+        history.memoList.RemoveAll(m => selectedItems.Any(s =>
+            s.txt == m.txt && s.fc == m.fc && s.bc == m.bc));
+
+        PlayerPrefs.SetString("QR_HISTORY", JsonUtility.ToJson(history));
+        PlayerPrefs.Save();
+
+        RefreshList();
+
+        if (deleteSelectedBtn != null)
+            deleteSelectedBtn.SetEnabled(false);
     }
 
     private void RefreshList()
     {
         if (scrollView == null) return;
         scrollView.Clear();
+        selectedItems.Clear();
 
-        string json = PlayerPrefs.GetString("QR_HISTORY", "{\"memoList\":[]}");
-        HistoryWrapper history = JsonUtility.FromJson<HistoryWrapper>(json);
+        HistoryWrapper history = GetHistory();
 
         foreach (var data in history.memoList)
         {
             VisualElement item = itemTemplate.CloneTree();
+            item.RemoveFromClassList("selected-item");
+
+            item.RegisterCallback<ClickEvent>(evt => ToggleSelection(item, data));
 
             var label = item.Q<Label>("ItemText");
             if (label != null) label.text = data.txt;
@@ -63,27 +123,28 @@ public class HistoryUIController : MonoBehaviour
                     backDot.style.backgroundColor = bCol;
             }
 
-            var deleteBtn = item.Q<Button>("DeleteButton");
-            if (deleteBtn != null)
-            {
-                deleteBtn.clicked += () => {
-                    DeleteEntry(data);
-                    RefreshList();
-                };
-            }
-
             scrollView.Add(item);
         }
     }
 
-    private void DeleteEntry(MemoData targetData)
+    private void ToggleSelection(VisualElement item, MemoData data)
     {
-        string json = PlayerPrefs.GetString("QR_HISTORY", "{\"memoList\":[]}");
-        HistoryWrapper history = JsonUtility.FromJson<HistoryWrapper>(json);
+        if (selectedItems.Contains(data))
+        {
+            selectedItems.Remove(data);
+            item.RemoveFromClassList("selected-item");
+            item.style.backgroundColor = new StyleColor(Color.clear);
+        }
+        else
+        {
+            selectedItems.Add(data);
+            item.AddToClassList("selected-item");
+            item.style.backgroundColor = new StyleColor(new Color(0.8f, 0.8f, 0.8f, 0.5f));
+        }
 
-        history.memoList.RemoveAll(m => m.txt == targetData.txt && m.fc == targetData.fc && m.bc == targetData.bc);
-
-        PlayerPrefs.SetString("QR_HISTORY", JsonUtility.ToJson(history));
-        PlayerPrefs.Save();
+        if (deleteSelectedBtn != null)
+        {
+            deleteSelectedBtn.SetEnabled(selectedItems.Count > 0);
+        }
     }
 }
