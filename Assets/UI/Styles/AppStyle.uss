@@ -145,3 +145,55 @@
     flex-shrink: 0;
     background-color: rgb(255, 255, 255);
 }
+
+.delete-button {
+    width: 150px;
+    height: 150px;
+    background-color: rgb(231, 34, 53);
+    border-radius: 15px;
+    font-size: 80px;
+    color: white;
+    margin: 10px;
+    border-width: 0;
+    border-top-left-radius: 12px;
+    border-top-right-radius: 12px;
+    border-bottom-right-radius: 12px;
+    border-bottom-left-radius: 12px;
+    -unity-font: url("project://database/Assets/Fonts/NotoSansJP-Regular.ttf?fileID=12800000&guid=158445b2f8da1f64bb39ce776870ae4a&type=3#NotoSansJP-Regular");
+    -unity-font-style: bold;
+    -unity-font-definition: initial;
+    margin-top: 50px;
+    margin-right: 50px;
+    margin-bottom: 0;
+    margin-left: 0;
+    padding-top: 10px;
+    padding-right: 10px;
+    padding-bottom: 10px;
+    padding-left: 10px;
+}
+
+.delete-button:disabled {
+    width: 150px;
+    height: 150px;
+    background-color: rgb(172, 172, 172);
+    border-radius: 15px;
+    font-size: 80px;
+    color: rgb(156, 163, 175);
+    margin: 10px;
+    border-width: 0;
+    border-top-left-radius: 12px;
+    border-top-right-radius: 12px;
+    border-bottom-right-radius: 12px;
+    border-bottom-left-radius: 12px;
+    -unity-font: url("project://database/Assets/Fonts/NotoSansJP-Regular.ttf?fileID=12800000&guid=158445b2f8da1f64bb39ce776870ae4a&type=3#NotoSansJP-Regular");
+    -unity-font-style: bold;
+    -unity-font-definition: initial;
+    margin-top: 50px;
+    margin-right: 50px;
+    margin-bottom: 0;
+    margin-left: 0;
+    padding-top: 10px;
+    padding-right: 10px;
+    padding-bottom: 10px;
+    padding-left: 10px;
+}
