@@ -7,36 +7,83 @@ using System.Collections.Generic;
 public class GenerateUIController : MonoBehaviour
 {
     public QRGenerator qrGenerator;
+    [SerializeField] private ColorPickerController colorPicker;
 
     private VisualElement qrFrame;
     private TextField contentField;
-    private TextField fontColorField;
-    private TextField backgroundColorField;
     private VisualElement fontPreview;
     private VisualElement backPreview;
+    private VisualElement memoPreview;
+    private Label memoText;
     private Button generateBtn;
     private Button saveBtn;
     private Button backBtn;
     private VisualElement messageUI;
 
     private Texture2D currentTexture;
+    private VisualElement _activeDot;
 
     private void OnEnable()
     {
+        
         var root = GetComponent<UIDocument>().rootVisualElement;
 
         qrFrame = root.Q<VisualElement>("QRFrame");
         contentField = root.Q<TextField>("ContentInput");
-        fontColorField = root.Q<TextField>("FontColorInput");
-        backgroundColorField = root.Q<TextField>("BackgroundColorInput");
-        fontPreview = root.Q<VisualElement>("FontColorPreview");
-        backPreview = root.Q<VisualElement>("BackgroundColorPreview");
+        fontPreview = root.Q<VisualElement>("FontColorDot");
+        backPreview = root.Q<VisualElement>("BackColorDot");
+        memoPreview = root.Q<VisualElement>("MemoPreview");
+        memoText = root.Q<Label>("MemoText");
         generateBtn = root.Q<Button>("GenerateButton");
         saveBtn = root.Q<Button>("SaveButton");
         backBtn = root.Q<Button>("BackButton");
         messageUI = root.Q<VisualElement>("MessageUI");
 
+        if (fontPreview != null)
+        {
+            fontPreview.style.backgroundColor = Color.black;
+        }
+
+        if (backPreview != null)
+        {
+            Color defaultBackColor;
+            if (ColorUtility.TryParseHtmlString("#FFF3A9", out defaultBackColor))
+            {
+                backPreview.style.backgroundColor = defaultBackColor;
+            }
+        }
+
+        UpdateMemoPreview();
+
         var historyBtn = root.Q<Button>("HistoryButton");
+
+        if (colorPicker != null)
+        {
+            colorPicker.Setup(root);
+            colorPicker.OnColorConfirmed = (confirmedColor) => {
+                if (_activeDot != null)
+                {
+                    _activeDot.style.backgroundColor = confirmedColor;
+                    UpdateMemoPreview();
+                }
+            };
+        }
+
+        if (fontPreview != null)
+        {
+            fontPreview.RegisterCallback<ClickEvent>(evt => {
+                _activeDot = fontPreview;
+                colorPicker.Open(fontPreview.style.backgroundColor.value);
+            });
+        }
+
+        if (backPreview != null)
+        {
+            backPreview.RegisterCallback<ClickEvent>(evt => {
+                _activeDot = backPreview;
+                colorPicker.Open(backPreview.style.backgroundColor.value);
+            });
+        }
 
         if (saveBtn != null) saveBtn.SetEnabled(false);
         if (messageUI != null) messageUI.style.display = DisplayStyle.None;
@@ -47,20 +94,15 @@ public class GenerateUIController : MonoBehaviour
 
         if (historyBtn != null)
             historyBtn.clicked += () => SceneManager.LoadScene("HistoryScene");
-
-        fontColorField.RegisterValueChangedCallback(evt => UpdateColor(fontPreview, evt.newValue));
-        backgroundColorField.RegisterValueChangedCallback(evt => UpdateColor(backPreview, evt.newValue));
-    }
-
-    private void UpdateColor(VisualElement preview, string hex)
-    {
-        if (preview != null && ColorUtility.TryParseHtmlString(hex, out Color col))
-            preview.style.backgroundColor = col;
     }
 
     private void OnGenerateClicked()
     {
-        currentTexture = qrGenerator.Generate(contentField.value, fontColorField.value, backgroundColorField.value);
+        string fontHex = "#" + ColorUtility.ToHtmlStringRGB(fontPreview.style.backgroundColor.value);
+        string backHex = "#" + ColorUtility.ToHtmlStringRGB(backPreview.style.backgroundColor.value);
+
+        currentTexture = qrGenerator.Generate(contentField.value, fontHex, backHex);
+
         if (currentTexture != null)
         {
             qrFrame.style.backgroundImage = new StyleBackground(currentTexture);
@@ -82,13 +124,12 @@ public class GenerateUIController : MonoBehaviour
         {
             v = 1,
             txt = contentField.value,
-            fc = fontColorField.value,
-            bc = backgroundColorField.value
+            fc = "#" + ColorUtility.ToHtmlStringRGB(fontPreview.style.backgroundColor.value),
+            bc = "#" + ColorUtility.ToHtmlStringRGB(backPreview.style.backgroundColor.value)
         };
 
         string json = PlayerPrefs.GetString("QR_HISTORY", "{\"memoList\":[]}");
         HistoryWrapper history = JsonUtility.FromJson<HistoryWrapper>(json);
-
         history.memoList.Insert(0, newData);
 
         if (history.memoList.Count > 50)
@@ -103,5 +144,14 @@ public class GenerateUIController : MonoBehaviour
         messageUI.style.display = DisplayStyle.Flex;
         yield return new WaitForSeconds(2.0f);
         messageUI.style.display = DisplayStyle.None;
+    }
+
+    private void UpdateMemoPreview()
+    {
+        if (memoPreview == null || memoText == null) return;
+
+        memoPreview.style.backgroundColor = backPreview.style.backgroundColor.value;
+
+        memoText.style.color = fontPreview.style.backgroundColor.value;
     }
 }
