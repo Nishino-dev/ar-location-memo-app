@@ -27,6 +27,12 @@ public class MemoData
             }
         }
     }
+
+    public bool IsSameAs(MemoData other)
+    {
+        if (other == null) return false;
+        return txt == other.txt && fc == other.fc && bc == other.bc;
+    }
 }
 
 [System.Serializable]

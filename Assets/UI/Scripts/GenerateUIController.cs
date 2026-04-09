@@ -3,6 +3,7 @@ using UnityEngine.UIElements;
 using UnityEngine.SceneManagement;
 using System.Collections;
 using System.Collections.Generic;
+using System.Linq;
 
 public class GenerateUIController : MonoBehaviour
 {
@@ -18,7 +19,10 @@ public class GenerateUIController : MonoBehaviour
     private Button generateBtn;
     private Button saveBtn;
     private Button backBtn;
-    private VisualElement messageUI;
+
+    private VisualElement dialogOverlay;
+    private Button confirmMoveBtn;
+    private Button cancelMoveBtn;
 
     private Texture2D currentTexture;
     private VisualElement _activeDot;
@@ -37,7 +41,10 @@ public class GenerateUIController : MonoBehaviour
         generateBtn = root.Q<Button>("GenerateButton");
         saveBtn = root.Q<Button>("SaveButton");
         backBtn = root.Q<Button>("BackButton");
-        messageUI = root.Q<VisualElement>("MessageUI");
+
+        dialogOverlay = root.Q<VisualElement>("DialogOverlay");
+        confirmMoveBtn = root.Q<Button>("ConfirmMoveButton");
+        cancelMoveBtn = root.Q<Button>("CancelMoveButton");
 
         if (fontPreview != null)
         {
@@ -85,8 +92,15 @@ public class GenerateUIController : MonoBehaviour
             });
         }
 
+        if (dialogOverlay != null) dialogOverlay.style.display = DisplayStyle.None;
+
+        if (confirmMoveBtn != null)
+            confirmMoveBtn.clicked += () => SceneManager.LoadScene("HistoryScene");
+
+        if (cancelMoveBtn != null)
+            cancelMoveBtn.clicked += () => dialogOverlay.style.display = DisplayStyle.None;
+
         if (saveBtn != null) saveBtn.SetEnabled(false);
-        if (messageUI != null) messageUI.style.display = DisplayStyle.None;
 
         generateBtn.clicked += OnGenerateClicked;
         saveBtn.clicked += OnSaveClicked;
@@ -113,9 +127,11 @@ public class GenerateUIController : MonoBehaviour
     private void OnSaveClicked()
     {
         if (currentTexture == null) return;
-        NativeGallery.SaveImageToGallery(currentTexture, "MyARApp", "QRCode_{0}.png");
         SaveToHistory();
-        StartCoroutine(ShowMessage());
+        if (dialogOverlay != null)
+        {
+            dialogOverlay.style.display = DisplayStyle.Flex;
+        }
     }
 
     private void SaveToHistory()
@@ -130,20 +146,14 @@ public class GenerateUIController : MonoBehaviour
 
         string json = PlayerPrefs.GetString("QR_HISTORY", "{\"memoList\":[]}");
         HistoryWrapper history = JsonUtility.FromJson<HistoryWrapper>(json);
+        if (history.memoList.Any(m => m.ShortID == newData.ShortID))
+        {
+            return;
+        }
         history.memoList.Insert(0, newData);
-
-        if (history.memoList.Count > 50)
-            history.memoList.RemoveAt(history.memoList.Count - 1);
 
         PlayerPrefs.SetString("QR_HISTORY", JsonUtility.ToJson(history));
         PlayerPrefs.Save();
-    }
-
-    IEnumerator ShowMessage()
-    {
-        messageUI.style.display = DisplayStyle.Flex;
-        yield return new WaitForSeconds(2.0f);
-        messageUI.style.display = DisplayStyle.None;
     }
 
     private void UpdateMemoPreview()
