@@ -14,6 +14,10 @@ https://github.com/yasirkula/UnityNativeShare
 Copyright (c) 2017 Süleyman Yasir KULA  
 https://github.com/yasirkula/UnityNativeGallery
 
+### Newtonsoft.Json
+Copyright (c) 2007 James Newton-King  
+https://github.com/JamesNK/Newtonsoft.Json
+
 ---
 
 Licensed under the MIT License:
@@ -218,4 +222,18 @@ https://github.com/micjahn/ZXing.Net
       incurred by, or claims asserted against, such Contributor by reason
       of your accepting any such warranty or additional liability.
 
-   END OF TERMS AND CONDITIONS
+---
+
+## Google ML Kit
+This software uses Google ML Kit for QR code scanning.  
+Your use of ML Kit is subject to the [Google ML Kit Terms of Service](https://developers.google.com/ml-kit/terms) and the [Google Privacy Policy](https://policies.google.com/privacy).
+
+---
+
+## Google Fonts (Noto Sans JP)
+Copyright 2014 The Noto Project Authors (https://github.com/notofonts/noto-cjk)
+
+Licensed under the SIL Open Font License, Version 1.1.  
+This license is available with a FAQ at: http://scripts.sil.org/OFL
+
+---
