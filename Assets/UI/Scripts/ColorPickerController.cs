@@ -63,8 +63,16 @@ public class ColorPickerController : MonoBehaviour
         };
 
         _addpresetBtn.clicked += () => {
-            CreateAndAddPreset(_previewBox.resolvedStyle.backgroundColor);
-            SavePresets();
+            Color currentColor = _previewBox.resolvedStyle.backgroundColor;
+
+            string currentHex = "#" + ColorUtility.ToHtmlStringRGB(currentColor);
+            bool alreadyExists = _currentPresets.Any(c => "#" + ColorUtility.ToHtmlStringRGB(c) == currentHex);
+
+            if (!alreadyExists)
+            {
+                CreateAndAddPreset(currentColor);
+                SavePresets();
+            }
         };
 
         _closeBtn.clicked += () => {
@@ -121,6 +129,12 @@ public class ColorPickerController : MonoBehaviour
 
     private void CreateAndAddPreset(Color color)
     {
+        string targetHex = "#" + ColorUtility.ToHtmlStringRGB(color);
+        if (_currentPresets.Any(c => "#" + ColorUtility.ToHtmlStringRGB(c) == targetHex))
+        {
+            return;
+        }
+
         _currentPresets.Add(color);
         CreatePresetDot(color);
 
