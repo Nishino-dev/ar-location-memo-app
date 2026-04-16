@@ -38,9 +38,18 @@ public class MLKitScanner {
             scanner.process(image)
                 .addOnSuccessListener(barcodes -> {
                     for (Barcode barcode : barcodes) {
-                        String result = extractText(barcode);
-                        if (result != null && !result.isEmpty()) {
-                            UnityPlayer.UnitySendMessage("XR Origin", "OnMLKitResult", result);
+                        String text = extractText(barcode);
+                        if (text != null && !text.isEmpty()) {
+                            android.graphics.Rect bounds = barcode.getBoundingBox();
+                            if (bounds != null) {
+                                float centerX = bounds.exactCenterX();
+                                float centerY = bounds.exactCenterY();
+
+                                String message = text + "|" + centerX + "," + centerY + "|" + width + "," + height;
+                                UnityPlayer.UnitySendMessage("XR Origin", "OnMLKitResult", message);
+                            } else {
+                                UnityPlayer.UnitySendMessage("XR Origin", "OnMLKitResult", text);
+                            }
                         }
                     }
                 })
