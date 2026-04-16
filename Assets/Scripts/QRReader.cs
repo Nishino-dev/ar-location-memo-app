@@ -12,7 +12,7 @@ public class QRReader : MonoBehaviour
     private ARCameraManager cameraManager;
     private bool isScanning = false;
     private float nextScanTime = 0;
-    public float scanInterval = 0.5f;
+    public float scanInterval = 0.25f;
 
     void Start()
     {
@@ -20,6 +20,22 @@ public class QRReader : MonoBehaviour
         if (cameraManager != null)
         {
             cameraManager.autoFocusRequested = true;
+            var configurations = cameraManager.GetConfigurations(Unity.Collections.Allocator.Temp);
+            if (configurations.IsCreated && configurations.Length > 0)
+            {
+                int bestFps = 0;
+                int bestIndex = 0;
+                for (int i = 0; i < configurations.Length; i++)
+                {
+                    if (configurations[i].framerate.HasValue && configurations[i].framerate.Value > bestFps)
+                    {
+                        bestFps = configurations[i].framerate.Value;
+                        bestIndex = i;
+                    }
+                }
+                cameraManager.currentConfiguration = configurations[bestIndex];
+                configurations.Dispose();
+            }
         }
         if (raycastManager == null) raycastManager = FindObjectOfType<ARRaycastManager>();
     }
@@ -70,31 +86,61 @@ public class QRReader : MonoBehaviour
                 Debug.LogError("ML Kit Call Failed: " + e.Message);
             }
         }
-
         nextScanTime = Time.time + scanInterval;
         isScanning = false;
     }
 
-    public void OnMLKitResult(string decodedText)
+    public void OnMLKitResult(string rawData)
     {
-        UnityMainThreadExecutor.Instance().Enqueue(() => {
-            if (string.IsNullOrEmpty(decodedText)) return;
+        UnityMainThreadExecutor.Instance().Enqueue(() =>
+        {
+            if (string.IsNullOrEmpty(rawData)) return;
 
-            MemoData data = null;
-            try
-            {
-                data = JsonUtility.FromJson<MemoData>(decodedText);
-            }
-            catch
-            {
-                if (decodedText.StartsWith("{")) return;
-                data = new MemoData { v = 1, txt = decodedText, fc = "#000000", bc = "#FFFFFF" };
-            }
+            string[] mainParts = rawData.Split('|');
+            if (mainParts.Length < 3) return;
 
-            if (data != null)
+            string decodedText = mainParts[0];
+            string[] coords = mainParts[1].Split(',');
+            string[] res = mainParts[2].Split(',');
+
+            if (coords.Length == 2 && res.Length == 2)
             {
+                float rawX = float.Parse(coords[0]);
+                float rawY = float.Parse(coords[1]);
+                float camW = float.Parse(res[0]);
+                float camH = float.Parse(res[1]);
+
+                float normX = rawX / camW;
+                float normY = rawY / camH;
+
+                float screenAspect = (float)Screen.width / Screen.height;
+                float cameraAspect = camW / camH;
+
+                float finalX, finalY;
+
+                if (screenAspect < cameraAspect)
+                {
+                    float scale = cameraAspect / screenAspect;
+                    finalX = (1.0f - normY) * Screen.width;
+                    finalY = (1.0f - normX) * Screen.height;
+                }
+                else
+                {
+                    float scale = screenAspect / cameraAspect;
+                    finalX = (1.0f - normY) * Screen.width;
+                    finalY = (1.0f - normX) * Screen.height;
+                }
+
+                Vector2 center = new Vector2(finalX, finalY);
+                Vector2[] corners = new Vector2[4];
+                for (int i = 0; i < 4; i++) corners[i] = center;
+
+                MemoData data = null;
+                try { data = JsonUtility.FromJson<MemoData>(decodedText); }
+                catch { data = new MemoData { v = 1, txt = decodedText, fc = "#000000", bc = "#FFFFFF" }; }
+
                 var placer = FindObjectOfType<ARPlaceObject>();
-                if (placer != null) placer.PlaceOrUpdateByQR(data);
+                if (placer != null) placer.PlaceOrUpdateByQR(data, corners, Quaternion.identity);
             }
         });
     }

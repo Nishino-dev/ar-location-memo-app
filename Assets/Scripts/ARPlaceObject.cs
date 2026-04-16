@@ -6,99 +6,65 @@ using UnityEngine.XR.ARSubsystems;
 
 public class ARPlaceObject : MonoBehaviour
 {
-    [Header("設定")]
-    public ARTrackedImageManager trackedImageManager;
     public ARRaycastManager raycastManager;
     public GameObject objectToPlace;
-
     private Dictionary<string, GameObject> spawnedObjects = new Dictionary<string, GameObject>();
 
-    void OnEnable()
+    public void PlaceOrUpdateByQR(MemoData data, Vector2[] corners, Quaternion qrRotation)
     {
-        if (trackedImageManager != null)
-            trackedImageManager.trackedImagesChanged += OnTrackedImagesChanged;
-    }
+        if (data == null || string.IsNullOrEmpty(data.txt) || corners == null || corners.Length < 4) return;
+        if (spawnedObjects.ContainsKey(data.txt)) return;
 
-    void OnDisable()
-    {
-        if (trackedImageManager != null)
-            trackedImageManager.trackedImagesChanged -= OnTrackedImagesChanged;
-    }
+        Vector2 qrScreenPos = (corners[0] + corners[1] + corners[2] + corners[3]) / 4f;
 
-    public void PlaceOrUpdateByQR(MemoData data)
-    {
-        Vector2 screenCenter = new Vector2(Screen.width / 2f, Screen.height / 2f);
         List<ARRaycastHit> hits = new List<ARRaycastHit>();
+        Vector3 targetPos;
+        Quaternion targetRot;
+        Vector3 normal = Vector3.up;
 
-        if (raycastManager.Raycast(screenCenter, hits, TrackableType.AllTypes))
+        if (raycastManager.Raycast(qrScreenPos, hits, TrackableType.PlaneWithinPolygon))
         {
             Pose hitPose = hits[0].pose;
-            Vector3 forward = hitPose.rotation * Vector3.forward;
-            forward.y = 0;
-            Quaternion uprightRotation = Quaternion.LookRotation(forward, Vector3.up);
+            targetPos = hitPose.position;
+            normal = hitPose.up;
 
-            if (spawnedObjects.ContainsKey(data.txt))
+            Vector3 toCamera = Camera.main.transform.position - targetPos;
+            Vector3 forward = Vector3.ProjectOnPlane(toCamera, normal).normalized;
+            if (forward.sqrMagnitude < 0.01f) forward = Vector3.ProjectOnPlane(Camera.main.transform.forward, normal).normalized;
+
+            targetRot = Quaternion.LookRotation(forward, normal);
+
+            if (qrRotation != Quaternion.identity)
             {
-                UpdateMemoTransform(spawnedObjects[data.txt], hitPose.position, uprightRotation, data);
+                targetRot *= Quaternion.AngleAxis(qrRotation.eulerAngles.z, normal);
             }
-            else
-            {
-                GameObject obj = Instantiate(objectToPlace, hitPose.position, uprightRotation);
-                if (obj.TryGetComponent<ARMemo>(out var memo)) memo.Initialize(data);
-                obj.AddComponent<ARAnchor>();
-                spawnedObjects.Add(data.txt, obj);
-            }
-        }
-    }
 
-    void OnTrackedImagesChanged(ARTrackedImagesChangedEventArgs eventArgs)
-    {
-        foreach (var trackedImage in eventArgs.added) UpdateImage(trackedImage);
-        foreach (var trackedImage in eventArgs.updated) UpdateImage(trackedImage);
-        foreach (var trackedImage in eventArgs.removed)
-        {
-            string name = trackedImage.referenceImage.name;
-            if (spawnedObjects.ContainsKey(name))
-            {
-                Destroy(spawnedObjects[name]);
-                spawnedObjects.Remove(name);
-            }
-        }
-    }
-
-    void UpdateImage(ARTrackedImage trackedImage)
-    {
-        string name = trackedImage.referenceImage.name;
-        MemoData data = new MemoData { v = 1, txt = name, fc = "#FFFFFF", bc = "#000000" };
-
-        if (!spawnedObjects.ContainsKey(name))
-        {
-            GameObject newObj = Instantiate(objectToPlace, trackedImage.transform.position, trackedImage.transform.rotation);
-            if (newObj.TryGetComponent<ARMemo>(out var memo)) memo.Initialize(data);
-            spawnedObjects[name] = newObj;
-        }
-
-        GameObject obj = spawnedObjects[name];
-
-        if (trackedImage.trackingState == TrackingState.Tracking)
-        {
-            obj.SetActive(true);
-            UpdateMemoTransform(obj, trackedImage.transform.position, trackedImage.transform.rotation, data);
+            targetPos += normal * 0.01f;
         }
         else
         {
-            obj.SetActive(false);
+            targetPos = Camera.main.ScreenToWorldPoint(new Vector3(qrScreenPos.x, qrScreenPos.y, 0.4f));
+            targetRot = Quaternion.LookRotation(Camera.main.transform.forward);
         }
-    }
 
-    private void UpdateMemoTransform(GameObject obj, Vector3 pos, Quaternion rot, MemoData data)
-    {
-        obj.transform.position = pos;
-        obj.transform.rotation = rot;
-        if (obj.TryGetComponent<ARMemo>(out var memo)) memo.Initialize(data);
+        GameObject obj = Instantiate(objectToPlace, targetPos, targetRot);
 
-        var anchor = obj.GetComponent<ARAnchor>();
-        if (anchor != null) Destroy(anchor);
+        if (obj.TryGetComponent<ARMemo>(out var memo))
+        {
+            memo.Initialize(data);
+        }
+
+        Renderer[] renderers = obj.GetComponentsInChildren<Renderer>();
+        if (renderers.Length > 0)
+        {
+            Bounds bounds = new Bounds(obj.transform.position, Vector3.zero);
+            foreach (Renderer r in renderers) bounds.Encapsulate(r.bounds);
+            Vector3 centerOffset = obj.transform.position - bounds.center;
+            obj.transform.position += centerOffset;
+        }
+
         obj.AddComponent<ARAnchor>();
+
+        spawnedObjects.Add(data.txt, obj);
     }
 }
