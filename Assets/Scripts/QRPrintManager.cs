@@ -5,79 +5,155 @@ using NativeShareNamespace;
 
 public class QRPrintManager : MonoBehaviour
 {
-    private readonly int a4Width = 2480;
-    private readonly int a4Height = 3508;
+    public int a4Width = 2480;
+    public int a4Height = 3508;
+    private int cols = 2;
+    private int rows = 3;
 
-    public void GenerateAndShareHistory(List<Texture2D> qrList, int cols, int rows, List<string> idList)
+    [Range(0.0f, 0.3f)] public float innerMarginRatio = 0.1f;
+    [Range(0.0f, 0.5f)] public float textHeightRatio = 0.15f;
+    public int cutLineLength = 40;
+    public int cutLineWidth = 2;
+    public int dashStep = 10;
+
+    [Header("Print Settings")]
+    public int printSafetyMargin = 100;
+
+    public void GenerateAndShareHistory(List<Texture2D> qrList, int c, int r, List<string> labels)
     {
-        if (qrList == null || qrList.Count == 0) return;
-
-        int max = cols * rows;
-        int totalPages = (qrList.Count + max - 1) / max;
-        List<string> paths = new List<string>();
+        this.cols = c;
+        this.rows = r;
+        int maxPerPage = cols * rows;
+        int totalPages = (qrList.Count + maxPerPage - 1) / maxPerPage;
+        List<string> filePaths = new List<string>();
 
         for (int p = 0; p < totalPages; p++)
         {
-            int start = p * max;
-            int count = Mathf.Min(max, qrList.Count - start);
+            int start = p * maxPerPage;
+            int count = Mathf.Min(maxPerPage, qrList.Count - start);
+            Texture2D sheet = GeneratePrintTexture(qrList.GetRange(start, count), labels.GetRange(start, count));
 
-            Texture2D sheet = CreateOnePage(qrList.GetRange(start, count), cols, rows, idList.GetRange(start, count));
             string path = Path.Combine(Application.temporaryCachePath, $"qr_page_{p}.png");
             File.WriteAllBytes(path, sheet.EncodeToPNG());
-            paths.Add(path);
-            Destroy(sheet);
+            filePaths.Add(path);
+
+            if (Application.isPlaying) Destroy(sheet);
+            else DestroyImmediate(sheet);
         }
 
         NativeShare share = new NativeShare();
-        paths.ForEach(p => share.AddFile(p));
+        filePaths.ForEach(p => share.AddFile(p));
         share.Share();
     }
 
-    private Texture2D CreateOnePage(List<Texture2D> pageQrs, int cols, int rows, List<string> idList)
+    public Texture2D GeneratePrintTexture(List<Texture2D> qrList, List<string> labels)
     {
-        Texture2D sheet = new Texture2D(a4Width, a4Height, TextureFormat.RGB24, false);
-        Color[] pixels = new Color[a4Width * a4Height];
-        for (int i = 0; i < pixels.Length; i++) pixels[i] = Color.white;
+        Texture2D tex = new Texture2D(a4Width, a4Height, TextureFormat.RGB24, false);
+        Color32[] bg = new Color32[a4Width * a4Height];
+        for (int i = 0; i < bg.Length; i++) bg[i] = Color.white;
+        tex.SetPixels32(bg);
 
-        int sideMargin = 150, hSpacing = 80, textSpace = 100;
-        int qrSize = (a4Width - (sideMargin * 2) - (hSpacing * (cols - 1))) / cols;
-        int blockH = qrSize + textSpace;
-        int vGap = (a4Height - (blockH * rows)) / (rows + 1);
-        int startX = (a4Width - ((cols * qrSize) + ((cols - 1) * hSpacing))) / 2;
+        int usableW = a4Width - (printSafetyMargin * 2);
+        int usableH = a4Height - (printSafetyMargin * 2);
 
-        for (int i = 0; i < pageQrs.Count; i++)
+        int cellW = usableW / cols;
+        int cellH = usableH / rows;
+
+        int totalGridW = cellW * cols;
+        int totalGridH = cellH * rows;
+
+        int offsetX = printSafetyMargin + (usableW - totalGridW) / 2;
+        int offsetY = printSafetyMargin + (usableH - totalGridH) / 2;
+
+        int shortSide = Mathf.Min(cellW, cellH);
+        int innerMargin = Mathf.RoundToInt(shortSide * innerMarginRatio);
+        int contentH = cellH - (innerMargin * 2);
+        int textH = Mathf.RoundToInt(contentH * textHeightRatio);
+        int qrSize = Mathf.Min(cellW - (innerMargin * 2), contentH - textH);
+
+        DrawAllGridLines(tex, offsetX, offsetY, cellW, cellH);
+
+        int index = 0;
+        for (int r = 0; r < rows; r++)
         {
-            int c = i % cols, r = i / cols;
-            int px = startX + (c * (qrSize + hSpacing));
-            int py = a4Height - (vGap + (r * (blockH + vGap))) - qrSize;
-
-            Color[] qrPixels = GetResizedPixels(pageQrs[i], qrSize);
-            for (int y = 0; y < qrSize; y++)
+            for (int c = 0; c < cols; c++)
             {
-                if (py + y >= 0 && py + y < a4Height)
-                    System.Array.Copy(qrPixels, y * qrSize, pixels, (py + y) * a4Width + px, qrSize);
+                if (index >= qrList.Count) break;
+
+                int baseX = offsetX + (c * cellW);
+                int baseY = offsetY + ((rows - 1 - r) * cellH);
+
+                int qrX = baseX + (cellW - qrSize) / 2;
+                int qrY = baseY + (cellH - (qrSize + textH)) / 2 + textH;
+
+                DrawQR(tex, qrList[index], qrX, qrY, qrSize);
+
+                int textCenterX = baseX + (cellW / 2);
+                int textY = baseY + (cellH - (qrSize + textH)) / 2 + (textH / 2) - (4 * 5 / 2);
+                DrawID(tex, labels[index], textCenterX, textY, 5);
+
+                index++;
             }
-
-            if (i < idList.Count) DrawID(pixels, idList[i], px + (qrSize / 2), py - 60, 6);
         }
-
-        sheet.SetPixels(pixels);
-        sheet.Apply();
-        return sheet;
+        tex.Apply();
+        return tex;
     }
 
-    private Color[] GetResizedPixels(Texture2D original, int size)
+    void DrawAllGridLines(Texture2D tex, int startX, int startY, int cw, int ch)
     {
-        RenderTexture rt = RenderTexture.GetTemporary(size, size);
-        Graphics.Blit(original, rt);
-        RenderTexture.active = rt;
-        Texture2D temp = new Texture2D(size, size);
-        temp.ReadPixels(new Rect(0, 0, size, size), 0, 0);
-        temp.Apply();
-        Color[] p = temp.GetPixels();
-        RenderTexture.ReleaseTemporary(rt);
-        Destroy(temp);
-        return p;
+        int endX = startX + cw * cols;
+        int endY = startY + ch * rows;
+
+        for (int c = 0; c <= cols; c++)
+        {
+            int x = startX + (c * cw);
+            DrawDashedLine(tex, x, startY, x, endY);
+        }
+        for (int r = 0; r <= rows; r++)
+        {
+            int y = startY + (r * ch);
+            DrawDashedLine(tex, startX, y, endX, y);
+        }
+    }
+
+    void DrawDashedLine(Texture2D tex, int x1, int y1, int x2, int y2)
+    {
+        int dx = Mathf.Abs(x2 - x1), dy = Mathf.Abs(y2 - y1);
+        int sx = x1 < x2 ? 1 : -1, sy = y1 < y2 ? 1 : -1;
+        int err = dx - dy;
+        int stepCount = 0;
+
+        while (true)
+        {
+            if ((stepCount / dashStep) % 2 == 0)
+            {
+                for (int i = -cutLineWidth; i <= cutLineWidth; i++)
+                    for (int j = -cutLineWidth; j <= cutLineWidth; j++)
+                    {
+                        int px = x1 + i, py = y1 + j;
+                        if (px >= 0 && px < a4Width && py >= 0 && py < a4Height)
+                            tex.SetPixel(px, py, Color.gray);
+                    }
+            }
+            if (x1 == x2 && y1 == y2) break;
+            int e2 = err * 2;
+            if (e2 > -dy) { err -= dy; x1 += sx; }
+            if (e2 < dx) { err += dx; y1 += sy; }
+            stepCount++;
+        }
+    }
+
+    void DrawQR(Texture2D canvas, Texture2D qr, int x, int y, int size)
+    {
+        for (int i = 0; i < size; i++)
+        {
+            for (int j = 0; j < size; j++)
+            {
+                int srcX = i * qr.width / size;
+                int srcY = j * qr.height / size;
+                canvas.SetPixel(x + i, y + j, qr.GetPixel(srcX, srcY));
+            }
+        }
     }
 
     private readonly Dictionary<char, byte[]> fontData = new Dictionary<char, byte[]> {
@@ -91,35 +167,27 @@ public class QRPrintManager : MonoBehaviour
         {'E',new byte[]{0xFF,0x91,0x91,0x91,0x81}},{'F',new byte[]{0xFF,0x90,0x90,0x90,0x80}},{'-',new byte[]{0x10,0x10,0x10,0x10,0x10}}
     };
 
-    private void DrawID(Color[] canvas, string id, int cx, int py, int s)
+    void DrawID(Texture2D tex, string id, int cx, int py, int s)
     {
+        if (string.IsNullOrEmpty(id)) return;
         int totalW = (id.Length * 5 * s) + ((id.Length - 1) * 2 * s);
         int sx = cx - (totalW / 2);
-
         for (int i = 0; i < id.Length; i++)
         {
             char c = char.ToUpper(id[i]);
             if (!fontData.ContainsKey(c)) continue;
             byte[] g = fontData[c];
             int charX = sx + (i * 7 * s);
-
             for (int gx = 0; gx < 5; gx++)
-            {
                 for (int gy = 0; gy < 8; gy++)
-                {
                     if (((g[gx] >> gy) & 1) == 1)
-                    {
                         for (int ox = 0; ox < s; ox++)
-                        {
                             for (int oy = 0; oy < s; oy++)
                             {
-                                int dx = charX + (gx * s) + ox, dy = py + (gy * s) + oy;
-                                if (dx >= 0 && dx < a4Width && dy >= 0 && dy < a4Height) canvas[dy * a4Width + dx] = Color.black;
+                                int dx = charX + (gx * s) + ox;
+                                int dy = py + (gy * s) + oy;
+                                if (dx >= 0 && dx < a4Width && dy >= 0 && dy < a4Height) tex.SetPixel(dx, dy, Color.black);
                             }
-                        }
-                    }
-                }
-            }
         }
     }
 }
