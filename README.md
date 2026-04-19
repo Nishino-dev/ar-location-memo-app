@@ -133,3 +133,20 @@ QRコードを基準とした配置自体は実現できていますが、角度
 - Google ML Kit  
 - Newtonsoft.Json  
 - Google Fonts (Noto Sans JP)
+
+## 6. セットアップ
+### 動作環境
+- Unity 2022.3.62f1 (LTS)
+- Android（ARCore対応端末）
+
+### 手順
+1. 本リポジトリをクローン
+2. Unityでプロジェクトを開く
+3. Androidビルド設定を行う
+4. 実機にビルドして起動
+
+※QRスキャン機能はAndroidのみ対応しています
+
+### 注意点
+- カメラ権限の許可が必要です
+- ARCore非対応端末では動作しません
